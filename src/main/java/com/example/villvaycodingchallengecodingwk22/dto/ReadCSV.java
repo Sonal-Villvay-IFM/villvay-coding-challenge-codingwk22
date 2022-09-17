@@ -24,7 +24,7 @@ public class ReadCSV {
             {
                 String[] t20_teams = line.split(splitBy);
                 // Team, Matches_Played, Matches_Lost, Matches_Won, Points, RunsScored, OversFaced, RunsConceded, OversBowled, NR
-                if (t20_teams[0].equals(country_name)) {
+                if (t20_teams[0].equalsIgnoreCase(country_name)) {
                     for (int i = 0; i < 10; i++)
                         teamDetails.add(t20_teams[i]);
                 }
