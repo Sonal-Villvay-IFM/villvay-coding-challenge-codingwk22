@@ -8,11 +8,13 @@ import com.example.villvaycodingchallengecodingwk22.exceptions.PredictionVagueEx
 import com.example.villvaycodingchallengecodingwk22.service.Fixture;
 import com.example.villvaycodingchallengecodingwk22.service.impl.Predictor;
 import com.example.villvaycodingchallengecodingwk22.service.impl.QualificationReport;
+import com.example.villvaycodingchallengecodingwk22.utils.GenerateReport;
 import com.itextpdf.text.DocumentException;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 import java.io.IOException;
+import java.text.ParseException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
@@ -20,7 +22,7 @@ import java.util.Scanner;
 @SpringBootApplication
 public class VillvayCodingChallengeCodingwk22Application {
 
-    public static void main(String[] args) throws IOException, NoPredictionsPossibleException, PredictionVagueException, DocumentException {
+    public static void main(String[] args) throws IOException, NoPredictionsPossibleException, PredictionVagueException, DocumentException, ParseException {
         SpringApplication.run(VillvayCodingChallengeCodingwk22Application.class, args);
         List<String> valid_countries = Arrays.asList("Sri Lanka", "Afghanistan", "India", "Pakistan", "Australia", "England");
         String selected_country = "";
@@ -48,5 +50,8 @@ public class VillvayCodingChallengeCodingwk22Application {
         // Qualification Report
         Predictor predict = new Predictor();
         QualificationReport statistics = predict.simulateQualificationScenarios(predictingCountry, pointsTable, fixtures);
+
+        GenerateReport g1 = new GenerateReport();
+        g1.generate(statistics, fixtures);
     }
 }

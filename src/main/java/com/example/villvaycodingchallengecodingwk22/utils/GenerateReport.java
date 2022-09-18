@@ -1,5 +1,6 @@
 package com.example.villvaycodingchallengecodingwk22.utils;
 
+import com.example.villvaycodingchallengecodingwk22.service.Fixture;
 import com.example.villvaycodingchallengecodingwk22.service.impl.QualificationReport;
 import com.itextpdf.text.*;
 import com.itextpdf.text.pdf.BaseFont;
@@ -7,12 +8,18 @@ import com.itextpdf.text.pdf.PdfWriter;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 
 public class GenerateReport {
     private static final Font catFont = new Font(Font.FontFamily.TIMES_ROMAN, 18,
             Font.BOLD);
     private static final Font redFont = new Font(Font.FontFamily.TIMES_ROMAN, 12,
             Font.NORMAL, BaseColor.RED);
+    private static final Font greyFont = new Font(Font.FontFamily.TIMES_ROMAN, 12,
+            Font.NORMAL, BaseColor.GRAY);
+
     private static final Font subFont = new Font(Font.FontFamily.TIMES_ROMAN, 14,
             Font.BOLD);
     private static final Font details = new Font(Font.FontFamily.COURIER, 11,
@@ -34,7 +41,7 @@ public class GenerateReport {
         doc.add(list);
     }
 
-    public void generate(QualificationReport data) throws IOException, DocumentException {
+    public void generate(QualificationReport data, java.util.List<Fixture> fixtureList) throws IOException, DocumentException, ParseException {
         Document document = new Document();
         PdfWriter.getInstance(document, new FileOutputStream("Predicted_Report.pdf"));
         BaseFont bf = BaseFont.createFont("font/NotoEmoji-Regular.ttf", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
@@ -44,6 +51,16 @@ public class GenerateReport {
         document.open();
         document.add(new Paragraph("T20 World Cup Qualification Simulator", catFont));
         document.add(new Paragraph("Qualification For Team : " + data.getQualificationTeam()));
+        document.add(Chunk.NEWLINE);
+        document.add(new Paragraph("Matches to be played", subFont));
+
+        for (Fixture matchesDue : fixtureList) {
+            DateFormat dateFormat = new SimpleDateFormat("yyyy-mm-dd");
+            String strDate = dateFormat.format(matchesDue.getFixtureDate());
+
+            document.add(new Paragraph(matchesDue.getTeam1().getTeam() + " vs "
+                    + matchesDue.getTeam2().getTeam() + " on " + strDate, greyFont));
+        }
 
         document.add(Chunk.NEWLINE);
         if (data.getGeneralComment() != null)
@@ -66,6 +83,9 @@ public class GenerateReport {
         document.add(new Paragraph(data.getBestCase().getAvgRunsConceded(), details));
         document.add(new Paragraph(data.getBestCase().getPredictedNRR(), details));
         document.add(new Paragraph("2.  To Qualify : " + data.getBestCase().getToQualify(), subFont));
+        document.add(new Paragraph("When batting First : N/A", details));
+        document.add(new Paragraph("When bowling First : N/A", details));
+
 
         document.add(Chunk.NEWLINE);
         document.add(Chunk.NEWLINE);
@@ -83,7 +103,8 @@ public class GenerateReport {
         document.add(new Paragraph(data.getWorstCase().getAvgRunsConceded(), details));
         document.add(new Paragraph(data.getWorstCase().getPredictedNRR(), details));
         document.add(new Paragraph("2.  To Qualify : " + data.getWorstCase().getToQualify(), subFont));
-
+        document.add(new Paragraph("When batting First : N/A", details));
+        document.add(new Paragraph("When bowling First : N/A", details));
 
         // add a couple of blank lines
         document.add(Chunk.NEWLINE);

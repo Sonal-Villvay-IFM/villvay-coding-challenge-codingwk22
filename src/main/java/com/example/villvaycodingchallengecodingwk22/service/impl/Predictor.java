@@ -7,7 +7,6 @@ import com.example.villvaycodingchallengecodingwk22.enums.WT20SuperSixTeamEnum;
 import com.example.villvaycodingchallengecodingwk22.exceptions.NoPredictionsPossibleException;
 import com.example.villvaycodingchallengecodingwk22.exceptions.PredictionVagueException;
 import com.example.villvaycodingchallengecodingwk22.service.Fixture;
-import com.example.villvaycodingchallengecodingwk22.utils.GenerateReport;
 import com.itextpdf.text.DocumentException;
 
 import java.io.IOException;
@@ -16,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class Predictor {
 
@@ -28,7 +28,9 @@ public class Predictor {
     protected QualificationReport.Case bestCase = new QualificationReport.Case();
     protected QualificationReport.Case worstCase = new QualificationReport.Case();
     protected List<PointsTable> mapping = new ArrayList<>();
-
+    protected DecimalFormat df = new DecimalFormat("#.###");
+    protected double team1NRR;
+    protected double team2NRR;
 
     /**
      * @param toToSimulateQualification - Team for which the prediction is done
@@ -38,25 +40,10 @@ public class Predictor {
     public QualificationReport simulateQualificationScenarios(WT20SuperSixTeam toToSimulateQualification,
                                                               List<Standing> pointsTable,
                                                               List<Fixture> fixtures) throws NoPredictionsPossibleException, PredictionVagueException, IOException, DocumentException {
-        //sort out the fixtures based on Date
-        //fixtures.stream().sorted(Comparator.comparing(Fixture::getFixtureDate)).collect(Collectors.toList());
-        //Qualify check
-        //WT20SuperSixTeam(team=Australia, code=AUS, matchesPlayed=4, matchesLost=3, matchesWon=1, points=2, runsScored=695, oversFaced=80, runsConceded=750, oversBowled=80, nRR=-0.688)
-
-        //Fixture1
-        //WT20SuperSixTeam(team=India, code=IND, matchesPlayed=4, matchesLost=3, matchesWon=1, points=2, runsScored=720, oversFaced=80, runsConceded=730, oversBowled=80, nRR=-0.125)
-        //WT20SuperSixTeam(team=Australia, code=AUS, matchesPlayed=4, matchesLost=3, matchesWon=1, points=2, runsScored=695, oversFaced=80, runsConceded=750, oversBowled=80, nRR=-0.688)
-        //Fri Oct 21 00:00:00 IST 2022
-
-        //Fixture2 IND VS AUS
-
-
         QualificationReport report = new QualificationReport();
         report.setQualificationTeam(toToSimulateQualification.getTeam());
 
-
         int numberOfRemainingMatches = fixtures.size();
-        DecimalFormat df = new DecimalFormat("#.###");
 
         //validation
         if (numberOfRemainingMatches == 0) {
@@ -70,33 +57,51 @@ public class Predictor {
             mapping.add(new PointsTable(map.getTeam(), map.getNetRunRate()));
         }
 
+        //sort out the fixtures based on Date and set Matches
+        fixtures.stream().sorted(Comparator.comparing(Fixture::getFixtureDate)).collect(Collectors.toList());
         setMatches(fixtures, numberOfRemainingMatches);
+
+        this.qualifierNRR = toToSimulateQualification.getNRR();
+        this.code = toToSimulateQualification.getCode();
+        this.country = toToSimulateQualification.getTeam();
 
         //Since only 1 team is left to play, date would be irrelevant
         if (numberOfRemainingMatches == 1) {
-            this.qualifierNRR = toToSimulateQualification.getNRR();
-            this.code = toToSimulateQualification.getCode();
-            this.country = toToSimulateQualification.getTeam();
-            double team1NRR = calculateNRR(match1.getTeam1());
-            double team2NRR = calculateNRR(match1.getTeam2());
-
-            for (PointsTable points : mapping) {
-                if (points.getCountry().equals(match1.getTeam1().getCode()))
-                    points.setNRR(Double.parseDouble(df.format(team1NRR)));
-                if (points.getCountry().equals(match1.getTeam2().getCode()))
-                    points.setNRR(Double.parseDouble(df.format(team2NRR)));
-            }
-
+            playFirstGame();
             List<PointsTable> qualifiers = getQualifiers(mapping);
             boolean predictorQualified = qualifiers.stream().anyMatch(n -> code.equals(n.getCountry()));
+            setDetails(report, qualifiers, predictorQualified);
+        }
+        // 2 fixture matches
+        else if (numberOfRemainingMatches == 2) {
+            playFirstGame();
+            playSecondGame();
 
-            if (!predictorQualified) {
-                report.setGeneralComment(this.country + " already Disqualified");
-                bestCase.setToQualify(this.country + " already Disqualified");
-                worstCase.setToQualify(this.country + " already Disqualified");
-            }
+            List<PointsTable> finalists = getQualifiers(mapping);
+            boolean predictorQualified = finalists.stream().anyMatch(n -> code.equals(n.getCountry()));
+            setDetails(report, finalists, predictorQualified);
+        } else {
+            // 3 fixture matches
+            playFirstGame();
+            playSecondGame();
+            playThirdGame();
 
-            // [PointsTable(country=AFG, NRR=0.7), PointsTable(country=SL, NRR=0.6)]
+            List<PointsTable> finalists = getQualifiers(mapping);
+            boolean predictorQualified = finalists.stream().anyMatch(n -> code.equals(n.getCountry()));
+            setDetails(report, finalists, predictorQualified);
+        }
+        report.setBestCase(bestCase);
+        report.setWorstCase(worstCase);
+
+        return report;
+    }
+
+    private void setDetails(QualificationReport report, List<PointsTable> qualifiers, boolean predictorQualified) {
+        if (!predictorQualified) {
+            report.setGeneralComment(this.country + " already Disqualified");
+            bestCase.setToQualify(this.country + " already Disqualified");
+            worstCase.setToQualify(this.country + " already Disqualified");
+
             bestCase.setWhoWouldWin(String.valueOf(qualifiers));
             if (team1NRR < team2NRR) {
                 setBestDetails(match1.getTeam1(), true);
@@ -105,16 +110,56 @@ public class Predictor {
                 setBestDetails(match1.getTeam2(), true);
                 setBestDetails(match1.getTeam1(), false);
             }
-        } else if (numberOfRemainingMatches == 2) {
-            calculateNRRforAll(pointsTable, fixtures);
         } else {
-            calculateNRRforAll(pointsTable, fixtures);
+            report.setGeneralComment(this.country + " already Qualified");
+            bestCase.setToQualify(this.country + " already Qualified");
+            worstCase.setToQualify(this.country + " already Qualified");
+
+            bestCase.setWhoWouldWin(String.valueOf(qualifiers));
+            if (team1NRR > team2NRR) {
+                setBestDetails(match1.getTeam1(), true);
+                setBestDetails(match1.getTeam2(), false);
+            } else {
+                setBestDetails(match1.getTeam2(), true);
+                setBestDetails(match1.getTeam1(), false);
+            }
         }
-        report.setBestCase(bestCase);
-        report.setWorstCase(worstCase);
-        GenerateReport g1 = new GenerateReport();
-        g1.generate(report);
-        return null;
+    }
+
+    private void playFirstGame() {
+        this.team1NRR = calculateNRR(match1.getTeam1());
+        this.team2NRR = calculateNRR(match1.getTeam2());
+
+        for (PointsTable points : mapping) {
+            if (points.getCountry().equals(match1.getTeam1().getCode()))
+                points.setNRR(Double.parseDouble(df.format(team1NRR)));
+            if (points.getCountry().equals(match1.getTeam2().getCode()))
+                points.setNRR(Double.parseDouble(df.format(team2NRR)));
+        }
+    }
+
+    private void playSecondGame() {
+        double match2_team1NRR = calculateNRR(match2.getTeam1());
+        double match2_team2NRR = calculateNRR(match2.getTeam2());
+
+        for (PointsTable points : mapping) {
+            if (points.getCountry().equals(match2.getTeam1().getCode()))
+                points.setNRR(Double.parseDouble(df.format(match2_team1NRR)));
+            if (points.getCountry().equals(match2.getTeam2().getCode()))
+                points.setNRR(Double.parseDouble(df.format(match2_team2NRR)));
+        }
+    }
+
+    private void playThirdGame() {
+        double match3_team1NRR = calculateNRR(match3.getTeam1());
+        double match3_team2NRR = calculateNRR(match3.getTeam2());
+
+        for (PointsTable points : mapping) {
+            if (points.getCountry().equals(match3.getTeam1().getCode()))
+                points.setNRR(Double.parseDouble(df.format(match3_team1NRR)));
+            if (points.getCountry().equals(match3.getTeam2().getCode()))
+                points.setNRR(Double.parseDouble(df.format(match3_team2NRR)));
+        }
     }
 
     private void setBestDetails(WT20SuperSixTeam team, boolean isBestCase) {
@@ -146,10 +191,6 @@ public class Predictor {
         }
     }
 
-    private void setWorstDetails() {
-
-    }
-
     // Selects the final qualifiers
     private List<PointsTable> getQualifiers(List<PointsTable> mapping) {
         List<PointsTable> first = mapping;
@@ -161,9 +202,6 @@ public class Predictor {
         first.add(secondHighest);
 
         return first;
-    }
-
-    private void calculateNRRforAll(List<Standing> pointsTable, List<Fixture> fixtures) {
     }
 
     public double calculateNRR(WT20SuperSixTeam team) {
@@ -200,38 +238,3 @@ public class Predictor {
         }
     }
 }
-
-
-//    private String qualificationTeam;
-//    private QualificationReport.Case bestCase;
-//    private QualificationReport.Case worstCase;
-//
-//    @Data
-//    public static class Case {
-//        private String whoWouldWin;
-//        private String avgRunsScored;
-//        private String predictedRunsScored;
-//        private String avgRunsConceded;
-//        private String predictedRunsConceded;
-//        private String predictedNRR;
-//    }
-//
-//    const prediction=(runsScored=700,runsConceded=725,matchPlayed=4)=>{
-//            const averagesRunsScored=Math.round(runsScored/matchPlayed);
-//            const runsScoredOversFaced=Math.round(runsScored+averagesRunsScored);
-//            const averageRunsConceded=Math.round(runsConceded/matchPlayed);
-//            const opponentScore=Math.round(averageRunsConceded-15);
-//            const predictedRunsConcededOversBowled=Math.round(
-//            runsConceded+opponentScore
-//            );
-//
-//            console.log("averagesRunsScored",averagesRunsScored);
-//            console.log("runsScoredOversFaced",runsScoredOversFaced);
-//            console.log("averageRunsConceded",averageRunsConceded);
-//            console.log("opponentScore",opponentScore);
-//
-//            const nrr=
-//            runsScoredOversFaced/100-predictedRunsConcededOversBowled/100;
-//            console.log(nrr);
-//            };
-//            prediction();
