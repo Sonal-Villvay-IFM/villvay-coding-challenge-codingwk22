@@ -85,7 +85,6 @@ public class ReadCSV {
             BufferedReader buffer = new BufferedReader(new FileReader("src/main/java/com/example/villvaycodingchallengecodingwk22/data/data.csv"));
             while ((line = buffer.readLine()) != null) {
                 String[] t20_teams = line.split(splitBy);
-                // Team, Matches_Played, Matches_Lost, Matches_Won, Points, RunsScored, OversFaced, RunsConceded, OversBowled, NRR
                 if (country_name.equalsIgnoreCase(t20_teams[0])) {
                     team.setTeam(t20_teams[0]);
                     team.setCode(getCode(t20_teams[0]));

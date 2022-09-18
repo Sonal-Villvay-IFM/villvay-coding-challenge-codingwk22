@@ -5,7 +5,6 @@ import lombok.Data;
 
 @Data
 public class WT20SuperSixTeam {
-    //Team, Matches_Played, Matches_Lost, Matches_Won, Points, RunsScored, OversFaced, RunsConceded, OversBowled, NR
     private String team;
     private WT20SuperSixTeamEnum code;
     private int matchesPlayed;

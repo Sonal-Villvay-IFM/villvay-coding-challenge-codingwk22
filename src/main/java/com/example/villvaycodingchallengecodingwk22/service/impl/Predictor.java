@@ -216,6 +216,7 @@ public class Predictor {
         return (runsScoredOversFaced / 100) - (predictedRunsConcededOversBowled / 100);
     }
 
+    //based on fixtures, matches will be set
     public void setMatches(List<Fixture> fixtures, int numberOfRemainingMatches) {
         int counter = 0;
         Fixture[] features = new Fixture[3];

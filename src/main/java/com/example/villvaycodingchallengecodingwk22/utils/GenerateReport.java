@@ -43,7 +43,7 @@ public class GenerateReport {
 
     public void generate(QualificationReport data, java.util.List<Fixture> fixtureList) throws IOException, DocumentException, ParseException {
         Document document = new Document();
-        PdfWriter.getInstance(document, new FileOutputStream("Predicted_Report.pdf"));
+        PdfWriter.getInstance(document, new FileOutputStream("Sample_Preview.pdf"));
         BaseFont bf = BaseFont.createFont("font/NotoEmoji-Regular.ttf", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
         Font font = FontFactory.getFont(FontFactory.COURIER, 16, BaseColor.BLACK);
 
