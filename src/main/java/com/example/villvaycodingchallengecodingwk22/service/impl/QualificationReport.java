@@ -17,6 +17,7 @@ public class QualificationReport {
         private String avgRunsConceded;
         private String predictedRunsConceded;
         private String predictedNRR;
+        private String toQualify;
     }
 }
 

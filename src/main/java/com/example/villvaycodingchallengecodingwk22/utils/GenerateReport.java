@@ -1,5 +1,6 @@
 package com.example.villvaycodingchallengecodingwk22.utils;
 
+import com.example.villvaycodingchallengecodingwk22.service.impl.QualificationReport;
 import com.itextpdf.text.*;
 import com.itextpdf.text.pdf.BaseFont;
 import com.itextpdf.text.pdf.PdfWriter;
@@ -8,33 +9,86 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 
 public class GenerateReport {
-    public void generate() throws IOException, DocumentException {
-        Document document = new Document();
-        PdfWriter.getInstance(document, new FileOutputStream("test.pdf"));
+    private static final Font catFont = new Font(Font.FontFamily.TIMES_ROMAN, 18,
+            Font.BOLD);
+    private static final Font redFont = new Font(Font.FontFamily.TIMES_ROMAN, 12,
+            Font.NORMAL, BaseColor.RED);
+    private static final Font subFont = new Font(Font.FontFamily.TIMES_ROMAN, 14,
+            Font.BOLD);
+    private static final Font details = new Font(Font.FontFamily.COURIER, 11,
+            Font.ITALIC);
+    private static final Font smallBold = new Font(Font.FontFamily.TIMES_ROMAN, 12,
+            Font.BOLD);
 
-        document.open();
+    private static void createList(Document doc, QualificationReport data, boolean isBest) throws DocumentException {
+        String winner = "";
+        String qualify = "";
+        if (isBest) {
+            winner = data.getBestCase().getWhoWouldWin();
+            qualify = data.getBestCase().getToQualify();
+        }
+        List list = new List(true, false, 10);
+        list.add(new ListItem("Who Should win : " + winner));
+
+        list.add(new ListItem("To Qualify : " + qualify));
+        doc.add(list);
+    }
+
+    public void generate(QualificationReport data) throws IOException, DocumentException {
+        Document document = new Document();
+        PdfWriter.getInstance(document, new FileOutputStream("Predicted_Report.pdf"));
+        BaseFont bf = BaseFont.createFont("font/NotoEmoji-Regular.ttf", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
         Font font = FontFactory.getFont(FontFactory.COURIER, 16, BaseColor.BLACK);
 
-        BaseFont bf = BaseFont.createFont("font/NotoEmoji-Regular.ttf", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
 
-        Paragraph p = new Paragraph("✌✔☑   -   ❎❌✊✋", new Font(bf, 22));
+        document.open();
+        document.add(new Paragraph("T20 World Cup Qualification Simulator", catFont));
+        document.add(new Paragraph("Qualification For Team : " + data.getQualificationTeam()));
 
-        document.add(p);
-        String content = "<b>Qualification For Team</b> U+1F44D : <html>\n" +
-                "<body>\n" +
-                "<span style='font-size:100px;'>&#128512;</span>\n" +
-                "<p>I will display &#x1F602;</p>\n" +
-                "<p>I will display &#x1F605;</p>\n" +
-                "</body>\n" +
-                "</html>";
-        document.add(new Paragraph("Hello, World!"));
+        document.add(Chunk.NEWLINE);
+        if (data.getGeneralComment() != null)
+            document.add(new Paragraph("General Comment: " + data.getGeneralComment(), redFont));
+        document.add(Chunk.NEWLINE);
+
+        Paragraph bestCase = new Paragraph("✌✔", new Font(bf, 22));
+        Paragraph worstCase = new Paragraph("✋❌ Worst Case", new Font(bf, 22));
+
+        document.add(bestCase);
+        document.add(new Paragraph("Best Case", smallBold));
+        document.add(Chunk.NEWLINE);
+
+        document.add(new Paragraph("1.  Who Should win : " + data.getBestCase().getWhoWouldWin(), subFont));
+
+        document.add(new Paragraph(data.getBestCase().getAvgRunsScored(), details));
+        document.add(new Paragraph(data.getBestCase().getPredictedRunsScored(), details));
+        document.add(new Paragraph(data.getBestCase().getPredictedRunsScored(), details));
+        document.add(new Paragraph(data.getBestCase().getAvgRunsScored(), details));
+        document.add(new Paragraph(data.getBestCase().getAvgRunsConceded(), details));
+        document.add(new Paragraph(data.getBestCase().getPredictedNRR(), details));
+        document.add(new Paragraph("2.  To Qualify : " + data.getBestCase().getToQualify(), subFont));
+
+        document.add(Chunk.NEWLINE);
+        document.add(Chunk.NEWLINE);
+        document.add(Chunk.NEWLINE);
+
+        document.add(worstCase);
+        document.add(new Paragraph("Worst Case", smallBold));
+        document.add(Chunk.NEWLINE);
+        document.add(new Paragraph("1.  Who Should win : " + data.getWorstCase().getWhoWouldWin(), subFont));
+
+        document.add(new Paragraph(data.getWorstCase().getAvgRunsScored(), details));
+        document.add(new Paragraph(data.getWorstCase().getPredictedRunsScored(), details));
+        document.add(new Paragraph(data.getWorstCase().getPredictedRunsScored(), details));
+        document.add(new Paragraph(data.getWorstCase().getAvgRunsScored(), details));
+        document.add(new Paragraph(data.getWorstCase().getAvgRunsConceded(), details));
+        document.add(new Paragraph(data.getWorstCase().getPredictedNRR(), details));
+        document.add(new Paragraph("2.  To Qualify : " + data.getWorstCase().getToQualify(), subFont));
+
 
         // add a couple of blank lines
         document.add(Chunk.NEWLINE);
         document.add(Chunk.NEWLINE);
 
-        // add one more line with text
-        document.add(new Paragraph(content));
         document.close();
     }
 }

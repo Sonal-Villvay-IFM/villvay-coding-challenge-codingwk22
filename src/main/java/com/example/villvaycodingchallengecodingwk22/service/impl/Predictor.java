@@ -7,8 +7,10 @@ import com.example.villvaycodingchallengecodingwk22.enums.WT20SuperSixTeamEnum;
 import com.example.villvaycodingchallengecodingwk22.exceptions.NoPredictionsPossibleException;
 import com.example.villvaycodingchallengecodingwk22.exceptions.PredictionVagueException;
 import com.example.villvaycodingchallengecodingwk22.service.Fixture;
+import com.example.villvaycodingchallengecodingwk22.utils.GenerateReport;
+import com.itextpdf.text.DocumentException;
 
-import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -23,32 +25,10 @@ public class Predictor {
     protected Float qualifierNRR = 0f;
     protected WT20SuperSixTeamEnum code;
     protected String country;
-    protected QualificationReport.Case bestCase;
-    protected QualificationReport.Case worstCase;
+    protected QualificationReport.Case bestCase = new QualificationReport.Case();
+    protected QualificationReport.Case worstCase = new QualificationReport.Case();
     protected List<PointsTable> mapping = new ArrayList<>();
 
-
-    public void setMatches(List<Fixture> fixtures, int numberOfRemainingMatches) {
-        int counter = 0;
-        Fixture[] features = new Fixture[3];
-
-        for (Fixture match : fixtures) {
-            features[counter] = match;
-            counter++;
-        }
-        if (numberOfRemainingMatches == 1) {
-            this.match1 = features[0];
-        }
-        if (numberOfRemainingMatches == 2) {
-            this.match1 = features[0];
-            this.match2 = features[1];
-        }
-        if (numberOfRemainingMatches == 3) {
-            this.match1 = features[0];
-            this.match2 = features[1];
-            this.match3 = features[2];
-        }
-    }
 
     /**
      * @param toToSimulateQualification - Team for which the prediction is done
@@ -57,7 +37,7 @@ public class Predictor {
      */
     public QualificationReport simulateQualificationScenarios(WT20SuperSixTeam toToSimulateQualification,
                                                               List<Standing> pointsTable,
-                                                              List<Fixture> fixtures) throws NoPredictionsPossibleException, PredictionVagueException, FileNotFoundException {
+                                                              List<Fixture> fixtures) throws NoPredictionsPossibleException, PredictionVagueException, IOException, DocumentException {
         //sort out the fixtures based on Date
         //fixtures.stream().sorted(Comparator.comparing(Fixture::getFixtureDate)).collect(Collectors.toList());
         //Qualify check
@@ -87,7 +67,6 @@ public class Predictor {
 
         // Initialize Mapping Table
         for (Standing map : pointsTable) {
-
             mapping.add(new PointsTable(map.getTeam(), map.getNetRunRate()));
         }
 
@@ -112,19 +91,68 @@ public class Predictor {
             boolean predictorQualified = qualifiers.stream().anyMatch(n -> code.equals(n.getCountry()));
 
             if (!predictorQualified) {
-                report.setGeneralComment(this.country + " Already Disqualified");
+                report.setGeneralComment(this.country + " already Disqualified");
+                bestCase.setToQualify(this.country + " already Disqualified");
+                worstCase.setToQualify(this.country + " already Disqualified");
             }
 
-
+            // [PointsTable(country=AFG, NRR=0.7), PointsTable(country=SL, NRR=0.6)]
+            bestCase.setWhoWouldWin(String.valueOf(qualifiers));
+            if (team1NRR < team2NRR) {
+                setBestDetails(match1.getTeam1(), true);
+                setBestDetails(match1.getTeam2(), false);
+            } else {
+                setBestDetails(match1.getTeam2(), true);
+                setBestDetails(match1.getTeam1(), false);
+            }
         } else if (numberOfRemainingMatches == 2) {
             calculateNRRforAll(pointsTable, fixtures);
+        } else {
+            calculateNRRforAll(pointsTable, fixtures);
         }
+        report.setBestCase(bestCase);
+        report.setWorstCase(worstCase);
+        GenerateReport g1 = new GenerateReport();
+        g1.generate(report);
         return null;
     }
 
+    private void setBestDetails(WT20SuperSixTeam team, boolean isBestCase) {
+        float runsScored = team.getRunsScored();
+        float runsConceded = team.getRunsConceded();
+        float matchPlayed = team.getMatchesPlayed();
+        float averagesRunsScored = Math.round(runsScored / matchPlayed);
+        float averageRunsConceded = Math.round(runsConceded / matchPlayed);
+        float opponentScore = Math.round(averageRunsConceded - 15);
+        float runsScoredOversFaced = Math.round(runsScored + averagesRunsScored);
+        float predictedRunsConcededOversBowled = Math.round(runsConceded + opponentScore);
+
+        if (isBestCase) {
+            bestCase.setWhoWouldWin(team.getTeam());
+            bestCase.setAvgRunsScored("Averages RunsScored when Batting : " + Math.round(runsScored / matchPlayed));
+            bestCase.setPredictedRunsScored("Predicted RunsScored/OversFaced would be : " + Math.round(runsScored + averagesRunsScored));
+            bestCase.setAvgRunsConceded("Average RunsConceded when bowling : " + averageRunsConceded
+                    + ". Due to the assumption, their opponent would score would be " + opponentScore);
+            bestCase.setPredictedRunsConceded("Predicted RunsConceded/OversBowled would be" + Math.round(runsConceded + opponentScore));
+            bestCase.setPredictedNRR("Predicted NRR Would be : " + ((runsScoredOversFaced / 100) - (predictedRunsConcededOversBowled / 100)));
+        } else {
+            worstCase.setWhoWouldWin(team.getTeam());
+            worstCase.setAvgRunsScored("Averages RunsScored when Batting : " + Math.round(runsScored / matchPlayed));
+            worstCase.setPredictedRunsScored("Predicted RunsScored/OversFaced would be : " + Math.round(runsScored + averagesRunsScored));
+            worstCase.setAvgRunsConceded("Average RunsConceded when bowling : " + averageRunsConceded
+                    + ". Due to the assumption, their opponent would score would be " + opponentScore);
+            worstCase.setPredictedRunsConceded("Predicted RunsConceded/OversBowled would be" + Math.round(runsConceded + opponentScore));
+            worstCase.setPredictedNRR("Predicted NRR Would be : " + ((runsScoredOversFaced / 100) - (predictedRunsConcededOversBowled / 100)));
+        }
+    }
+
+    private void setWorstDetails() {
+
+    }
+
+    // Selects the final qualifiers
     private List<PointsTable> getQualifiers(List<PointsTable> mapping) {
         List<PointsTable> first = mapping;
-
         PointsTable highest = Collections.max(first, Comparator.comparingDouble(PointsTable::getNRR));
         first.remove(highest);
         PointsTable secondHighest = Collections.max(first, Comparator.comparingDouble(PointsTable::getNRR));
@@ -148,6 +176,28 @@ public class Predictor {
         float opponentScore = Math.round(averageRunsConceded - 15);
         float predictedRunsConcededOversBowled = Math.round(runsConceded + opponentScore);
         return (runsScoredOversFaced / 100) - (predictedRunsConcededOversBowled / 100);
+    }
+
+    public void setMatches(List<Fixture> fixtures, int numberOfRemainingMatches) {
+        int counter = 0;
+        Fixture[] features = new Fixture[3];
+
+        for (Fixture match : fixtures) {
+            features[counter] = match;
+            counter++;
+        }
+        if (numberOfRemainingMatches == 1) {
+            this.match1 = features[0];
+        }
+        if (numberOfRemainingMatches == 2) {
+            this.match1 = features[0];
+            this.match2 = features[1];
+        }
+        if (numberOfRemainingMatches == 3) {
+            this.match1 = features[0];
+            this.match2 = features[1];
+            this.match3 = features[2];
+        }
     }
 }
 
